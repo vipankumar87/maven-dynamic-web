@@ -1,18 +1,38 @@
 package com.rudracomputer.webblog.model;
 
+import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 
+@Entity
+@Table(name = "users")
 public class User {
 
+    @Id
+    @Column(name = "id", length = 36, nullable = false)
     private String id;
+
+    @Column(name = "name", length = 100, nullable = false)
     private String name;
+
+    @Column(name = "email", length = 150, nullable = false, unique = true)
     private String email;
+
+    @Column(name = "password_hash", length = 255, nullable = false)
     private String passwordHash;
+
+    @Column(name = "role", length = 10, nullable = false)
     private String role; // "USER" | "ADMIN"
+
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "reset_token", length = 100)
     private String resetToken;
+
+    @Column(name = "reset_token_expiry")
     private LocalDateTime resetTokenExpiry;
 
     public User() {}

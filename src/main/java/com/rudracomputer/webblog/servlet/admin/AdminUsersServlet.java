@@ -1,7 +1,8 @@
 package com.rudracomputer.webblog.servlet.admin;
 
+import com.rudracomputer.webblog.dao.UserDAO;
+import com.rudracomputer.webblog.dao.jpa.JpaUserDAO;
 import com.rudracomputer.webblog.model.User;
-import com.rudracomputer.webblog.util.UserStore;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -11,20 +12,18 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 @WebServlet("/admin/users")
 public class AdminUsersServlet extends HttpServlet {
 
+    private final UserDAO userDAO = new JpaUserDAO();
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-
-        // Consume flash messages from session
         transferFlash(req);
-
-        UserStore store = UserStore.getInstance();
-        List<User> users = store.findAll();
-
+        List<User> users = userDAO.findAll();
         req.setAttribute("users",      users);
         req.setAttribute("totalUsers", users.size());
         req.getRequestDispatcher("/admin/users.jsp").forward(req, resp);
@@ -39,36 +38,31 @@ public class AdminUsersServlet extends HttpServlet {
         String userId = req.getParameter("userId");
 
         if (action == null || userId == null) {
-            resp.sendRedirect(req.getContextPath() + "/admin/users");
-            return;
+            resp.sendRedirect(req.getContextPath() + "/admin/users"); return;
         }
 
-        UserStore store = UserStore.getInstance();
         User currentUser = (User) req.getSession().getAttribute("user");
 
         switch (action) {
             case "delete" -> {
                 if (currentUser != null && userId.equals(currentUser.getId())) {
-                    req.getSession().setAttribute("flash_error",
-                            "You cannot delete your own account.");
+                    req.getSession().setAttribute("flash_error", "You cannot delete your own account.");
                 } else {
-                    boolean deleted = store.deleteById(userId);
+                    boolean deleted = userDAO.deleteById(userId);
                     req.getSession().setAttribute("flash_success",
                             deleted ? "User deleted successfully." : "User not found.");
                 }
             }
             case "toggleRole" -> {
-                User target = store.findById(userId);
-                if (target == null) {
+                Optional<User> target = userDAO.findById(userId);
+                if (target.isEmpty()) {
                     req.getSession().setAttribute("flash_error", "User not found.");
                 } else if (currentUser != null && userId.equals(currentUser.getId())) {
-                    req.getSession().setAttribute("flash_error",
-                            "You cannot change your own role.");
+                    req.getSession().setAttribute("flash_error", "You cannot change your own role.");
                 } else {
-                    String oldRole = target.getRole();
-                    store.toggleRole(target);
+                    userDAO.toggleRole(target.get());
                     req.getSession().setAttribute("flash_success",
-                            target.getName() + " is now " + target.getRole() + ".");
+                            target.get().getName() + " is now " + target.get().getRole() + ".");
                 }
             }
             default -> req.getSession().setAttribute("flash_error", "Unknown action.");
@@ -77,20 +71,12 @@ public class AdminUsersServlet extends HttpServlet {
         resp.sendRedirect(req.getContextPath() + "/admin/users");
     }
 
-    /** Move flash attributes from session scope to request scope. */
     private void transferFlash(HttpServletRequest req) {
         var session = req.getSession(false);
         if (session == null) return;
-
         Object success = session.getAttribute("flash_success");
-        if (success != null) {
-            req.setAttribute("success", success);
-            session.removeAttribute("flash_success");
-        }
+        if (success != null) { req.setAttribute("success", success); session.removeAttribute("flash_success"); }
         Object error = session.getAttribute("flash_error");
-        if (error != null) {
-            req.setAttribute("error", error);
-            session.removeAttribute("flash_error");
-        }
+        if (error != null) { req.setAttribute("error", error); session.removeAttribute("flash_error"); }
     }
 }

@@ -1,6 +1,7 @@
 package com.rudracomputer.webblog.servlet;
 
-import com.rudracomputer.webblog.util.UserStore;
+import com.rudracomputer.webblog.dao.UserDAO;
+import com.rudracomputer.webblog.dao.jpa.JpaUserDAO;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -12,6 +13,8 @@ import java.io.IOException;
 
 @WebServlet("/register")
 public class RegisterServlet extends HttpServlet {
+
+    private final UserDAO userDAO = new JpaUserDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -33,53 +36,35 @@ public class RegisterServlet extends HttpServlet {
         String password        = req.getParameter("password");
         String confirmPassword = req.getParameter("confirmPassword");
 
-        // Validation
         if (name.isEmpty() || email.isEmpty() || password == null || password.isEmpty()) {
             req.setAttribute("error", "All fields are required.");
-            req.getRequestDispatcher("/account/register.jsp").forward(req, resp);
-            return;
+            req.getRequestDispatcher("/account/register.jsp").forward(req, resp); return;
         }
-
         if (name.length() < 2) {
             req.setAttribute("error", "Name must be at least 2 characters.");
-            req.getRequestDispatcher("/account/register.jsp").forward(req, resp);
-            return;
+            req.getRequestDispatcher("/account/register.jsp").forward(req, resp); return;
         }
-
         if (!email.matches("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$")) {
             req.setAttribute("error", "Please enter a valid email address.");
-            req.getRequestDispatcher("/account/register.jsp").forward(req, resp);
-            return;
+            req.getRequestDispatcher("/account/register.jsp").forward(req, resp); return;
         }
-
         if (password.length() < 6) {
             req.setAttribute("error", "Password must be at least 6 characters.");
-            req.getRequestDispatcher("/account/register.jsp").forward(req, resp);
-            return;
+            req.getRequestDispatcher("/account/register.jsp").forward(req, resp); return;
         }
-
         if (!password.equals(confirmPassword)) {
             req.setAttribute("error", "Passwords do not match.");
-            req.getRequestDispatcher("/account/register.jsp").forward(req, resp);
-            return;
+            req.getRequestDispatcher("/account/register.jsp").forward(req, resp); return;
         }
-
-        if (UserStore.getInstance().existsByEmail(email.toLowerCase())) {
+        if (userDAO.existsByEmail(email.toLowerCase())) {
             req.setAttribute("error", "An account with this email already exists.");
-            req.getRequestDispatcher("/account/register.jsp").forward(req, resp);
-            return;
+            req.getRequestDispatcher("/account/register.jsp").forward(req, resp); return;
         }
 
-        // Create user
-        UserStore.getInstance().createUser(name, email.toLowerCase(), password);
-
-        // Redirect to login with success message
-        req.getSession(true).setAttribute("flash_success",
-                "Account created! You can now sign in.");
+        userDAO.create(name, email.toLowerCase(), password);
+        req.getSession(true).setAttribute("flash_success", "Account created! You can now sign in.");
         resp.sendRedirect(req.getContextPath() + "/login");
     }
 
-    private String trim(String s) {
-        return (s == null) ? "" : s.trim();
-    }
+    private String trim(String s) { return (s == null) ? "" : s.trim(); }
 }
