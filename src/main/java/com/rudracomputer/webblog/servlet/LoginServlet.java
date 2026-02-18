@@ -18,7 +18,8 @@ import java.util.Optional;
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
 
-    private final UserDAO userDAO = new JdbcUserDAO();
+    private static final long serialVersionUID = 1L;
+	private final UserDAO userDAO = new JdbcUserDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -27,7 +28,7 @@ public class LoginServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/");
             return;
         }
-        var session = req.getSession(false);
+        HttpSession session = req.getSession(false);
         if (session != null) {
             Object flash = session.getAttribute("flash_success");
             if (flash != null) {
