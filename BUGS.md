@@ -86,3 +86,25 @@ After pulling this commit:
 - [ ] Registration saves a user row to MySQL `users` table
 - [ ] Login authenticates against DB (not in-memory store)
 - [ ] Admin dashboard shows correct DB-backed user counts
+
+---
+
+## Bug 3 — Tables not auto-created on startup
+
+**Reported:** `webblog` database tables are not auto-created; app crashes on first run because the `users` table does not exist.
+
+**Root cause:** There was no mechanism to run `schema.sql` at startup. The file existed only as a manual reference.
+
+**Fix applied:** Added `SchemaInitializer.java` — a `@WebListener` that runs `contextInitialized()` once when Tomcat deploys the app.
+
+**File:** `src/main/java/com/rudracomputer/webblog/db/SchemaInitializer.java`
+
+What it does, in order:
+1. Connects to MySQL **without** a database selected (`localhost:3306/`) and runs `CREATE DATABASE IF NOT EXISTS webblog`.
+2. Connects via `DBConnection` and runs `CREATE TABLE IF NOT EXISTS users (...)`.
+3. Inserts a default admin via `INSERT IGNORE` (safe to re-run — no duplicate rows):
+   - **Email:** `admin@webblog.com`
+   - **Password:** `Admin@123`
+   - Hash is generated at runtime by `PasswordUtils.hash()` so it always matches the login check.
+
+No manual SQL execution is needed. A clean server start is enough.
